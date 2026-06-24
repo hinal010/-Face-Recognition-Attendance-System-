@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <h2>Face Attend</h2>
+
+        <a href="/" class="active">Dashboard</a>
+        <a href="/register-page">Register Person</a>
+        <a href="/attendance-page">Attendance</a>
+        <a href="/persons-page">Registered Persons</a>
+    </aside>
+
+    <main class="content">
+        <h1>Dashboard</h1>
+        <p class="subtitle">Real-Time Face Attendance System</p>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Registered</h3>
+                <h2>{{ total_registered }}</h2>
+            </div>
+
+            <div class="stat-card success">
+                <h3>Today Present</h3>
+                <h2>{{ today_present }}</h2>
+            </div>
+
+            <div class="stat-card danger-card">
+                <h3>Today Absent</h3>
+                <h2>{{ today_absent }}</h2>
+            </div>
+        </div>
+    </main>
+
+</div>
+
+</body>
+</html>

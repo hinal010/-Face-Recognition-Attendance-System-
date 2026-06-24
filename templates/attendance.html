@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Start Attendance</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a href="/" class="back-btn">
+    ← Back to Dashboard
+</a>
+<div class="main-layout">
+
+
+    <div class="form-panel">
+        <h2>Live Attendance</h2>
+
+        <button onclick="startAttendance()">Start Attendance</button>
+        <button onclick="stopAttendance()" class="danger">Stop Attendance</button>
+
+        <div class="info-box">
+            <p><b>ID:</b> <span id="personId">-</span></p>
+            <p><b>Name:</b> <span id="fullName">-</span></p>
+            <p><b>Department:</b> <span id="department">-</span></p>
+            <p><b>Status:</b> <span id="status">Waiting...</span></p>
+            <p><b>Date:</b> <span id="date">-</span></p>
+            <p><b>Time:</b> <span id="time">-</span></p>
+        </div>
+
+        <p id="message"></p>
+    </div>
+
+    <div class="camera-panel">
+        <video id="video" autoplay></video>
+
+        <div class="face-guide">
+            <span>Face Attendance</span>
+        </div>
+
+        <canvas id="canvas" style="display:none;"></canvas>
+    </div>
+
+</div>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const message = document.getElementById("message");
+
+let attendanceRunning = false;
+let intervalId = null;
+
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+        video.srcObject = stream;
+    })
+    .catch(() => {
+        message.innerText = "Camera access denied.";
+        message.style.color = "red";
+    });
+
+function captureFrame() {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    return canvas.toDataURL("image/jpeg");
+}
+
+function startAttendance() {
+    if (attendanceRunning) return;
+
+    attendanceRunning = true;
+    message.innerText = "Attendance started.";
+    message.style.color = "#2563eb";
+
+    intervalId = setInterval(markAttendance, 3000);
+}
+
+function stopAttendance() {
+    attendanceRunning = false;
+
+    if (intervalId) {
+        clearInterval(intervalId);
+    }
+
+    message.innerText = "Attendance stopped.";
+    message.style.color = "red";
+}
+
+async function markAttendance() {
+    if (!attendanceRunning) return;
+
+    const imageData = captureFrame();
+
+    const formData = new FormData();
+    formData.append("image_data", imageData);
+
+    const response = await fetch("/mark-attendance", {
+        method: "POST",
+        body: formData
+    });
+
+    const result = await response.json();
+
+    document.getElementById("status").innerText = result.message || result.status;
+
+    if (result.person_id) {
+        document.getElementById("personId").innerText = result.person_id;
+        document.getElementById("fullName").innerText = result.full_name;
+        document.getElementById("department").innerText = result.department;
+        document.getElementById("date").innerText = result.date;
+        document.getElementById("time").innerText = result.time;
+    }
+
+    if (result.status === "marked") {
+        message.innerText = "Attendance marked successfully.";
+        message.style.color = "green";
+    } else if (result.status === "already_marked") {
+        message.innerText = "Already marked today.";
+        message.style.color = "#f59e0b";
+    } else if (result.status === "unknown") {
+        message.innerText = "Unknown person.";
+        message.style.color = "red";
+    } else {
+        message.innerText = result.message;
+        message.style.color = "#2563eb";
+    }
+}
+</script>
+
+</body>
+</html>

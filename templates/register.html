@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register Person</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a href="/" class="back-btn">
+    ← Back to Dashboard
+</a>
+<div class="main-layout">
+
+    <div class="form-panel">
+        <h2>Register Employee / Student</h2>
+
+        <input type="text" id="person_id" placeholder="Employee / Student ID">
+        <input type="text" id="full_name" placeholder="Full Name">
+        <input type="text" id="department" placeholder="Department">
+
+        <button onclick="startAutoCapture()">Start Auto Capture</button>
+
+        <div class="steps">
+            <p id="step1">1. Look Straight</p>
+            <p id="step2">2. Turn Slightly Left</p>
+            <p id="step3">3. Turn Slightly Right</p>
+        </div>
+
+        <p id="message"></p>
+    </div>
+
+    <div class="camera-panel">
+        <video id="video" autoplay></video>
+
+        <div class="face-guide">
+            <span id="guideText">Position Face Here</span>
+        </div>
+
+        <canvas id="canvas" style="display:none;"></canvas>
+    </div>
+
+</div>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const message = document.getElementById("message");
+const guideText = document.getElementById("guideText");
+
+let capturedImages = {
+    straight_image: null,
+    left_image: null,
+    right_image: null
+};
+
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+        video.srcObject = stream;
+    })
+    .catch(() => {
+        message.innerText = "Camera access denied.";
+        message.style.color = "red";
+    });
+
+function captureFrame() {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    return canvas.toDataURL("image/jpeg");
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function countdownCapture(text) {
+    guideText.innerText = text;
+    message.style.color = "#2563eb";
+
+    message.innerText = text + " - Capturing in 3";
+    await sleep(1000);
+
+    message.innerText = text + " - Capturing in 2";
+    await sleep(1000);
+
+    message.innerText = text + " - Capturing in 1";
+    await sleep(1000);
+
+    return captureFrame();
+}
+
+async function startAutoCapture() {
+    const personId = document.getElementById("person_id").value;
+    const fullName = document.getElementById("full_name").value;
+    const department = document.getElementById("department").value;
+
+    if (!personId || !fullName || !department) {
+        message.innerText = "Please fill all fields.";
+        message.style.color = "red";
+        return;
+    }
+
+    message.innerText = "Keep your face inside the guide.";
+    message.style.color = "#2563eb";
+
+    await sleep(1000);
+
+    capturedImages.straight_image = await countdownCapture("Look Straight");
+    document.getElementById("step1").classList.add("done");
+
+    await sleep(1200);
+
+    capturedImages.left_image = await countdownCapture("Turn Slightly Left");
+    document.getElementById("step2").classList.add("done");
+
+    await sleep(1200);
+
+    capturedImages.right_image = await countdownCapture("Turn Slightly Right");
+    document.getElementById("step3").classList.add("done");
+
+    await registerPerson(personId, fullName, department);
+}
+
+async function registerPerson(personId, fullName, department) {
+    const formData = new FormData();
+
+    formData.append("person_id", personId);
+    formData.append("full_name", fullName);
+    formData.append("department", department);
+    formData.append("straight_image", capturedImages.straight_image);
+    formData.append("left_image", capturedImages.left_image);
+    formData.append("right_image", capturedImages.right_image);
+
+    message.innerText = "Saving face encodings...";
+
+    const response = await fetch("/register", {
+        method: "POST",
+        body: formData
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+        message.innerText = result.message;
+        message.style.color = "green";
+    } else {
+        message.innerText = result.detail;
+        message.style.color = "red";
+    }
+}
+</script>
+
+</body>
+</html>

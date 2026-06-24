@@ -1,0 +1,11 @@
+fastapi 
+uvicorn 
+sqlalchemy 
+psycopg2-binary 
+python-multipart 
+jinja2 
+opencv-python 
+face-recognition 
+numpy
+pillow
+tzdata 

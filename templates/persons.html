@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registered Persons</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <h2>Face Attend</h2>
+
+        <a href="/">Dashboard</a>
+        <a href="/register-page">Register Person</a>
+        <a href="/attendance-page">Attendance</a>
+        <a href="/persons-page" class="active">Registered Persons</a>
+    </aside>
+
+    <main class="content">
+        <h1>Registered Persons</h1>
+        <p class="subtitle">View all registered employees/students.</p>
+
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Person ID</th>
+                        <th>Full Name</th>
+                        <th>Department</th>
+                        <th>Registered Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for person in persons %}
+                    <tr>
+                        <td>{{ person.person_id }}</td>
+                        <td>{{ person.full_name }}</td>
+                        <td>{{ person.department }}</td>
+                        <td>{{ person.created_at.date() }}</td>
+                        <td>
+                            <a class="view-btn" href="/person-attendance/{{ person.id }}">
+                                View
+                            </a>
+                            <button class="delete-btn" onclick="deletePerson('{{ person.id }}')">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+</div>
+<script>
+async function deletePerson(personId) {
+    if (!confirm("Are you sure you want to delete this person?")) {
+        return;
+    }
+
+    const response = await fetch(`/delete-person/${personId}`, {
+        method: "POST"
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+        alert(result.message);
+        location.reload();
+    } else {
+        alert(result.detail);
+    }
+}
+</script>
+</body>
+</html>
