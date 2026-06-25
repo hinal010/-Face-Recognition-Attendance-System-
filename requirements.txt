@@ -7,5 +7,6 @@ jinja2
 opencv-python 
 face-recognition 
 numpy
+plotly
 pillow
 tzdata 
