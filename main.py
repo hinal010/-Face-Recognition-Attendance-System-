@@ -4,7 +4,7 @@ from datetime import datetime, date, timedelta
 
 import face_recognition
 import numpy as np
-
+import plotly.graph_objects as go
 from fastapi import FastAPI, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -248,7 +248,7 @@ def mark_attendance(
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
-            
+
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
     total_registered = db.query(Person).count()
@@ -260,6 +260,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     ).count()
 
     today_absent = total_registered - today_present
+    recent_attendance = db.query(Attendance).order_by(Attendance.id.desc()).limit(5).all()
 
     return templates.TemplateResponse(
     request,
@@ -267,7 +268,8 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     {
         "total_registered": total_registered,
         "today_present": today_present,
-        "today_absent": today_absent
+        "today_absent": today_absent,
+        "recent_attendance": recent_attendance
     }
 )
 
@@ -354,4 +356,26 @@ def delete_person(
 
     return {
         "message": "Person deleted successfully"
+    }
+
+@app.get("/get-graph-data")
+def get_graph_data(db: Session = Depends(get_db)):
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+
+    labels = []
+    present_values = []
+
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+
+        present_count = db.query(Attendance).filter(
+            Attendance.date == day
+        ).count()
+
+        labels.append(day.strftime("%d %b"))
+        present_values.append(present_count)
+
+    return {
+        "labels": labels,
+        "values": present_values
     }

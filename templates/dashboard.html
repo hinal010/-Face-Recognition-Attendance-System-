@@ -3,6 +3,7 @@
 <head>
     <title>Attendance Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 </head>
 <body>
 
@@ -37,9 +38,74 @@
                 <h2>{{ today_absent }}</h2>
             </div>
         </div>
-    </main>
+        <div class="dashboard-bottom">
+
+    <div class="chart-card">
+        <h2>Date-wise Attendance</h2>
+        <div id="graphBox"></div>
+    </div>
+
+    <div class="recent-card">
+        <h2>Recent Attendance</h2>
+
+        {% for item in recent_attendance %}
+        <div class="recent-item">
+            <div>
+                <h4>{{ item.person.full_name }}</h4>
+                <p>{{ item.person.person_id }} | {{ item.person.department }}</p>
+            </div>
+
+            <span>{{ item.time.strftime("%I:%M %p") }}</span>
+        </div>
+        {% endfor %}
+    </div>
 
 </div>
 
+    </main>
+
+</div>
+<script>
+async function loadGraph() {
+    const response = await fetch("/get-graph-data");
+    const data = await response.json();
+
+    const trace = {
+        x: data.labels,
+        y: data.values,
+        type: "scatter",
+        mode: "lines",
+        fill: "tozeroy",
+        line: {
+            color: "#8b5cf6",
+            width: 3
+        },
+        fillcolor: "rgba(139, 92, 246, 0.18)"
+    };
+
+    const layout = {
+        height: 320,
+        margin: { l: 30, r: 30, t: 20, b: 40 },
+        showlegend: false,
+        paper_bgcolor: "white",
+        plot_bgcolor: "white",
+        xaxis: { showgrid: false },
+        yaxis: {
+            showgrid: true,
+            gridcolor: "#e5e7eb",
+            zeroline: false,
+            showticklabels: false
+        }
+    };
+
+    Plotly.react("graphBox", [trace], layout, {
+        responsive: true,
+        displayModeBar: false
+    });
+}
+
+loadGraph();
+setInterval(loadGraph, 10000);
+</script>
 </body>
 </html>
