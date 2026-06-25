@@ -9,3 +9,5 @@ face-recognition
 numpy
 pillow
 tzdata 
+plotly 
+pandas 
