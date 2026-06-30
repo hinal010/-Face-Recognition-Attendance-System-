@@ -8,8 +8,8 @@
 <a href="/" class="back-btn">
     ← Back to Dashboard
 </a>
-<div class="main-layout">
 
+<div class="main-layout">
 
     <div class="form-panel">
         <h2>Live Attendance</h2>
@@ -23,19 +23,16 @@
             <p><b>Department:</b> <span id="department">-</span></p>
             <p><b>Status:</b> <span id="status">Waiting...</span></p>
             <p><b>Date:</b> <span id="date">-</span></p>
-            <p><b>Time:</b> <span id="time">-</span></p>
+            <p><b>In Time:</b> <span id="inTime">-</span></p>
+            <p><b>Out Time:</b> <span id="outTime">-</span></p>
         </div>
 
         <p id="message"></p>
     </div>
 
     <div class="camera-panel">
-        <video id="video" autoplay></video>
-
-        <div class="face-guide">
-            <span>Face Attendance</span>
-        </div>
-
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlayCanvas" class="overlay-canvas"></canvas>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
@@ -45,6 +42,8 @@
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const message = document.getElementById("message");
+const overlayCanvas = document.getElementById("overlayCanvas");
+const overlayContext = overlayCanvas.getContext("2d");
 
 let attendanceRunning = false;
 let intervalId = null;
@@ -68,13 +67,46 @@ function captureFrame() {
     return canvas.toDataURL("image/jpeg");
 }
 
+function drawFaceBox(box, status) {
+    overlayCanvas.width = video.clientWidth;
+    overlayCanvas.height = video.clientHeight;
+
+    overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    if (!box) return;
+
+    const scaleX = overlayCanvas.width / box.image_width;
+    const scaleY = overlayCanvas.height / box.image_height;
+
+    const x = box.left * scaleX;
+    const y = box.top * scaleY;
+    const w = (box.right - box.left) * scaleX;
+    const h = (box.bottom - box.top) * scaleY;
+
+    const successStatuses = ["in_marked", "out_marked", "already_in", "completed"];
+    overlayContext.strokeStyle = successStatuses.includes(status) ? "#22c55e" : "#ef4444";
+    overlayContext.lineWidth = 4;
+    overlayContext.strokeRect(x, y, w, h);
+}
+
+function clearPersonDetails() {
+    document.getElementById("personId").innerText = "-";
+    document.getElementById("fullName").innerText = "-";
+    document.getElementById("department").innerText = "-";
+    document.getElementById("date").innerText = "-";
+    document.getElementById("inTime").innerText = "-";
+    document.getElementById("outTime").innerText = "-";
+}
+
 function startAttendance() {
     if (attendanceRunning) return;
 
     attendanceRunning = true;
     message.innerText = "Attendance started.";
     message.style.color = "#2563eb";
+    document.getElementById("status").innerText = "Recognizing...";
 
+    markAttendance();
     intervalId = setInterval(markAttendance, 3000);
 }
 
@@ -83,8 +115,11 @@ function stopAttendance() {
 
     if (intervalId) {
         clearInterval(intervalId);
+        intervalId = null;
     }
 
+    overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    document.getElementById("status").innerText = "Stopped";
     message.innerText = "Attendance stopped.";
     message.style.color = "red";
 }
@@ -92,40 +127,77 @@ function stopAttendance() {
 async function markAttendance() {
     if (!attendanceRunning) return;
 
+    if (!video.videoWidth || !video.videoHeight) {
+        message.innerText = "Camera loading...";
+        message.style.color = "#2563eb";
+        return;
+    }
+
     const imageData = captureFrame();
 
     const formData = new FormData();
     formData.append("image_data", imageData);
 
-    const response = await fetch("/mark-attendance", {
-        method: "POST",
-        body: formData
-    });
+    try {
+        const response = await fetch("/mark-attendance", {
+            method: "POST",
+            body: formData
+        });
 
-    const result = await response.json();
+        const result = await response.json();
 
-    document.getElementById("status").innerText = result.message || result.status;
+        drawFaceBox(result.box, result.status);
+        document.getElementById("status").innerText = result.message || result.status;
 
-    if (result.person_id) {
-        document.getElementById("personId").innerText = result.person_id;
-        document.getElementById("fullName").innerText = result.full_name;
-        document.getElementById("department").innerText = result.department;
-        document.getElementById("date").innerText = result.date;
-        document.getElementById("time").innerText = result.time;
+        if (result.person_id) {
+            document.getElementById("personId").innerText = result.person_id;
+            document.getElementById("fullName").innerText = result.full_name;
+            document.getElementById("department").innerText = result.department;
+            document.getElementById("date").innerText = result.date;
+            document.getElementById("inTime").innerText = result.in_time || "-";
+            document.getElementById("outTime").innerText = result.out_time || "-";
+        }
+
+        if (result.status === "waiting") {
+            clearPersonDetails();
+            message.innerText = "Place your face in the camera.";
+            message.style.color = "#2563eb";
+        }
+        else if (result.status === "multiple") {
+            clearPersonDetails();
+            message.innerText = "Only one face should be visible.";
+            message.style.color = "red";
+        }
+        else if (result.status === "in_marked") {
+            message.innerText = "In Time marked successfully.";
+            message.style.color = "green";
+        }
+        else if (result.status === "already_in") {
+            message.innerText = result.message;
+            message.style.color = "#f59e0b";
+        }
+        else if (result.status === "out_marked") {
+            message.innerText = "Out Time marked successfully.";
+            message.style.color = "#2563eb";
+        }
+        else if (result.status === "completed") {
+            message.innerText = "Attendance already completed today.";
+            message.style.color = "#6b7280";
+        }
+        else if (result.status === "unknown") {
+            clearPersonDetails();
+            message.innerText = "Unknown person.";
+            message.style.color = "red";
+        }
+        else {
+            message.innerText = result.message;
+            message.style.color = "#2563eb";
+        }
     }
-
-    if (result.status === "marked") {
-        message.innerText = "Attendance marked successfully.";
-        message.style.color = "green";
-    } else if (result.status === "already_marked") {
-        message.innerText = "Already marked today.";
-        message.style.color = "#f59e0b";
-    } else if (result.status === "unknown") {
-        message.innerText = "Unknown person.";
+    catch (error) {
+        console.error(error);
+        message.innerText = "Something went wrong.";
         message.style.color = "red";
-    } else {
-        message.innerText = result.message;
-        message.style.color = "#2563eb";
     }
 }
 </script>

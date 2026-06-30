@@ -8,16 +8,21 @@
 <a href="/" class="back-btn">
     ← Back to Dashboard
 </a>
+
 <div class="main-layout">
 
     <div class="form-panel">
-        <h2>Register Employee / Student</h2>
+        <h2>Register Person</h2>
 
-        <input type="text" id="person_id" placeholder="Employee / Student ID">
-        <input type="text" id="full_name" placeholder="Full Name">
-        <input type="text" id="department" placeholder="Department">
+        <div class="student-summary">
+            <h3>Profile Details</h3>
+            <p id="studentSummaryText">No profile details added</p>
+            <button type="button" onclick="openStudentModal()">+ Add Profile Details</button>
+        </div>
 
-        <button onclick="startAutoCapture()">Start Auto Capture</button>
+        <button type="button" id="captureBtn" onclick="startAutoCapture()">
+            Start Auto Capture
+        </button>
 
         <div class="steps">
             <p id="step1">1. Look Straight</p>
@@ -29,22 +34,60 @@
     </div>
 
     <div class="camera-panel">
-        <video id="video" autoplay></video>
-
-        <div class="face-guide">
-            <span id="guideText">Position Face Here</span>
-        </div>
-
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlayCanvas" class="overlay-canvas"></canvas>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
+</div>
+
+<div id="studentModal" class="modal">
+    <div class="modal-box">
+        <h2>Profile Details</h2>
+
+        <label>Person ID <span class="required">*</span></label>
+        <input type="text" id="person_id" placeholder="Auto Generated" readonly>
+
+        <label>Full Name <span class="required">*</span></label>
+        <input type="text" id="full_name" placeholder="Enter Full Name">
+
+        <label>Email <span class="required">*</span></label>
+        <input type="email" id="email" placeholder="Enter Email Address">
+
+        <label>Contact Number <span class="required">*</span></label>
+        <input type="text" id="contact" maxlength="10" placeholder="Enter Contact Number">
+
+        <label>Department / Internship Course <span class="required">*</span></label>
+        <input type="text" id="department" placeholder="Enter Department / Course">
+
+        <label>College <span class="optional">(Optional)</span></label>
+        <input type="text" id="college" placeholder="Enter College">
+
+        <label>Semester <span class="optional">(Optional)</span></label>
+        <input type="text" id="semester" placeholder="Enter Semester">
+
+        <div class="modal-actions">
+            <button onclick="saveStudentDetails()" class="save-btn">
+                Save Details
+            </button>
+
+            <button  onclick="closeStudentModal()" class="danger">
+                Cancel
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const message = document.getElementById("message");
-const guideText = document.getElementById("guideText");
+const overlayCanvas = document.getElementById("overlayCanvas");
+const overlayContext = overlayCanvas.getContext("2d");
+const captureBtn = document.getElementById("captureBtn");
+
+let studentDetailsSaved = false;
+let captureRunning = false;
 
 let capturedImages = {
     straight_image: null,
@@ -61,6 +104,71 @@ navigator.mediaDevices.getUserMedia({ video: true })
         message.style.color = "red";
     });
 
+function openStudentModal() {
+    document.getElementById("studentModal").style.display = "flex";
+}
+
+function closeStudentModal() {
+    document.getElementById("studentModal").style.display = "none";
+}
+
+function getStudentDetails() {
+    return {
+        personId: document.getElementById("person_id").value.trim(),
+        fullName: document.getElementById("full_name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        contact: document.getElementById("contact").value.trim(),
+        college: document.getElementById("college").value.trim(),
+        semester: document.getElementById("semester").value.trim(),
+        department: document.getElementById("department").value.trim()
+    };
+}
+
+function saveStudentDetails() {
+    const details = getStudentDetails();
+
+    if (
+        !details.personId ||
+        !details.fullName ||
+        !details.email ||
+        !details.contact ||
+        !details.department
+    ) {
+        message.innerText = "Please add profile details first.";
+        message.style.color = "red";
+        return;
+    }
+
+    if (!details.email.includes("@") || !details.email.includes(".")) {
+        message.innerText = "Please enter a valid email address.";
+        message.style.color = "red";
+        return;
+    }
+
+    if (!/^\d{10}$/.test(details.contact)) {
+        message.innerText = "Contact number must be 10 digits.";
+        message.style.color = "red";
+        return;
+    }
+
+    studentDetailsSaved = true;
+
+    document.getElementById("studentSummaryText").innerHTML = `
+        <b>ID:</b> ${details.personId}<br>
+        <b>Name:</b> ${details.fullName}<br>
+        <b>Email:</b> ${details.email}<br>
+        <b>Contact:</b> ${details.contact}<br>
+        <b>College:</b> ${details.college}<br>
+        <b>Semester:</b> ${details.semester}<br>
+        <b>Department:</b> ${details.department}<br>
+        ✅ Details Saved
+    `;
+
+    message.innerText = "Profile details saved. Now start face capture.";
+    message.style.color = "green";
+    closeStudentModal();
+}
+
 function captureFrame() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -75,81 +183,174 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function countdownCapture(text) {
-    guideText.innerText = text;
+async function checkFacePosition() {
+    const imageData = captureFrame();
+
+    const formData = new FormData();
+    formData.append("image_data", imageData);
+
+    const response = await fetch("/check-face-position", {
+        method: "POST",
+        body: formData
+    });
+
+    return await response.json();
+}
+
+async function waitForPerfectFace(stepText) {
     message.style.color = "#2563eb";
+    message.innerText = stepText;
 
-    message.innerText = text + " - Capturing in 3";
-    await sleep(1000);
+    while (true) {
+        const result = await checkFacePosition();
 
-    message.innerText = text + " - Capturing in 2";
-    await sleep(1000);
+        drawFaceBox(result.box, result.ready);
 
-    message.innerText = text + " - Capturing in 1";
-    await sleep(1000);
+        if (result.ready) {
+            message.innerText = stepText + " - Face detected. Capturing...";
+            message.style.color = "green";
+            await sleep(800);
 
-    return captureFrame();
+            return captureFrame();
+        }
+
+        message.innerText = stepText + " - " + result.message;
+        message.style.color = "red";
+
+        await sleep(700);
+    }
 }
 
 async function startAutoCapture() {
-    const personId = document.getElementById("person_id").value;
-    const fullName = document.getElementById("full_name").value;
-    const department = document.getElementById("department").value;
+    if (captureRunning) return;
 
-    if (!personId || !fullName || !department) {
-        message.innerText = "Please fill all fields.";
+    const details = getStudentDetails();
+
+    if (!studentDetailsSaved) {
+        message.innerText = "Please fill required profile details.";
         message.style.color = "red";
+        openStudentModal();
         return;
     }
 
-    message.innerText = "Keep your face inside the guide.";
+    if (
+        !details.personId ||
+        !details.fullName ||
+        !details.email ||
+        !details.contact ||
+        !details.department
+    ) {
+        studentDetailsSaved = false;
+        message.innerText = "Please fill all student details.";
+        message.style.color = "red";
+        openStudentModal();
+        return;
+    }
+
+    captureRunning = true;
+    captureBtn.disabled = true;
+
+    document.getElementById("step1").classList.remove("done");
+    document.getElementById("step2").classList.remove("done");
+    document.getElementById("step3").classList.remove("done");
+
+    capturedImages.straight_image = null;
+    capturedImages.left_image = null;
+    capturedImages.right_image = null;
+
+    message.innerText = "Starting smart face capture...";
     message.style.color = "#2563eb";
 
     await sleep(1000);
 
-    capturedImages.straight_image = await countdownCapture("Look Straight");
+    capturedImages.straight_image = await waitForPerfectFace("Look Straight");
     document.getElementById("step1").classList.add("done");
 
     await sleep(1200);
 
-    capturedImages.left_image = await countdownCapture("Turn Slightly Left");
+    capturedImages.left_image = await waitForPerfectFace("Turn Slightly Left");
     document.getElementById("step2").classList.add("done");
 
     await sleep(1200);
 
-    capturedImages.right_image = await countdownCapture("Turn Slightly Right");
+    capturedImages.right_image = await waitForPerfectFace("Turn Slightly Right");
     document.getElementById("step3").classList.add("done");
 
-    await registerPerson(personId, fullName, department);
+    await registerPerson();
 }
 
-async function registerPerson(personId, fullName, department) {
+async function registerPerson() {
+    const details = getStudentDetails();
+
     const formData = new FormData();
 
-    formData.append("person_id", personId);
-    formData.append("full_name", fullName);
-    formData.append("department", department);
+    formData.append("person_id", details.personId);
+    formData.append("full_name", details.fullName);
+    formData.append("email", details.email);
+    formData.append("contact", details.contact);
+    formData.append("college", details.college);
+    formData.append("semester", details.semester);
+    formData.append("department", details.department);
     formData.append("straight_image", capturedImages.straight_image);
     formData.append("left_image", capturedImages.left_image);
     formData.append("right_image", capturedImages.right_image);
 
     message.innerText = "Saving face encodings...";
+    message.style.color = "#2563eb";
 
-    const response = await fetch("/register", {
-        method: "POST",
-        body: formData
-    });
+    try {
+        const response = await fetch("/register", {
+            method: "POST",
+            body: formData
+        });
 
-    const result = await response.json();
+        const result = await response.json();
 
-    if (response.ok) {
-        message.innerText = result.message;
-        message.style.color = "green";
-    } else {
-        message.innerText = result.detail;
+        if (response.ok) {
+            message.innerText = result.message;
+            message.style.color = "green";
+            overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        } else {
+            message.innerText = result.detail || "Registration failed.";
+            message.style.color = "red";
+        }
+    } catch (error) {
+        message.innerText = "Something went wrong. Please try again.";
         message.style.color = "red";
+    } finally {
+        captureRunning = false;
+        captureBtn.disabled = false;
     }
 }
+
+function drawFaceBox(box, ready) {
+    overlayCanvas.width = video.clientWidth;
+    overlayCanvas.height = video.clientHeight;
+
+    overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    if (!box) return;
+
+    const scaleX = overlayCanvas.width / box.image_width;
+    const scaleY = overlayCanvas.height / box.image_height;
+
+    const x = box.left * scaleX;
+    const y = box.top * scaleY;
+    const w = (box.right - box.left) * scaleX;
+    const h = (box.bottom - box.top) * scaleY;
+
+    overlayContext.strokeStyle = ready ? "#22c55e" : "#ef4444";
+    overlayContext.lineWidth = 4;
+    overlayContext.strokeRect(x, y, w, h);
+}
+async function loadNextPersonId() {
+    const response = await fetch("/next-person-id");
+    const result = await response.json();
+
+    document.getElementById("person_id").value = result.person_id;
+}
+
+window.onload = loadNextPersonId;
 </script>
 
 </body>

@@ -12,6 +12,10 @@ class Person(Base):
     person_id = Column(String, unique=True, nullable=False, index=True)
     full_name = Column(String, nullable=False)
     department = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    contact = Column(String, nullable=False)
+    college = Column(String, nullable=True)
+    semester = Column(String, nullable=True)
     created_at = Column(
     DateTime,
     default=lambda: datetime.now(
@@ -56,7 +60,17 @@ class Attendance(Base):
     id = Column(Integer, primary_key=True, index=True)
     person_id_fk = Column(Integer, ForeignKey("persons.id"), nullable=False)
     date = Column(Date, nullable=False)
-    time = Column(Time, nullable=False)
+    in_time = Column(Time, nullable=True)
+    out_time = Column(Time, nullable=True)
     status = Column(String, default="Present")
 
     person = relationship("Person", back_populates="attendances")
+    
+class Holiday(Base):
+    __tablename__ = "holidays"
+
+    id = Column(Integer, primary_key=True, index=True)
+    holiday_name = Column(String, nullable=False)
+    holiday_type = Column(String, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)

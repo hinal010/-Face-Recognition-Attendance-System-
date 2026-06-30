@@ -16,6 +16,7 @@
         <a href="/register-page">Register Person</a>
         <a href="/attendance-page">Attendance</a>
         <a href="/persons-page">Registered Persons</a>
+        <a href="/holidays-page">Holiday Settings</a>
     </aside>
 
     <main class="content">
@@ -55,7 +56,19 @@
                 <p>{{ item.person.person_id }} | {{ item.person.department }}</p>
             </div>
 
-            <span>{{ item.time.strftime("%I:%M %p") }}</span>
+            <span>In:
+                {% if item.in_time %}
+                    {{ item.in_time.strftime("%I:%M %p") }}
+                {% else %}
+                    -
+                {% endif %}
+                <br>
+                Out:
+                {% if item.out_time %}
+                    {{ item.out_time.strftime("%I:%M %p") }}
+                {% else %}
+                    -
+                {% endif %}</span>
         </div>
         {% endfor %}
     </div>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Holiday Settings</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <h2>Face Attend</h2>
+
+        <a href="/">Dashboard</a>
+        <a href="/register-page">Register Person</a>
+        <a href="/attendance-page">Attendance</a>
+        <a href="/persons-page">Registered Persons</a>
+        <a href="/holidays-page" class="active">Holiday Settings</a>
+    </aside>
+
+    <main class="content">
+        <h1>Holiday Settings</h1>
+        <p class="subtitle">Add Saturday holidays and festival holidays.</p>
+
+        <div class="table-card">
+            <form id="holidayForm" class="holiday-form">
+                <input type="text" id="holiday_name" placeholder="Holiday Name">
+
+                <select id="holiday_type">
+                    <option value="Festival">Festival</option>
+                    <option value="Saturday Holiday">Saturday Holiday</option>
+                    <option value="Other">Other</option>
+                </select>
+
+                <input type="date" id="start_date">
+                <input type="date" id="end_date">
+
+                <button type="submit">Add Holiday</button>
+            </form>
+
+            <p id="message"></p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Holiday Name</th>
+                        <th>Type</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for holiday in holidays %}
+                    <tr>
+                        <td>{{ holiday.holiday_name }}</td>
+                        <td>{{ holiday.holiday_type }}</td>
+                        <td>{{ holiday.start_date }}</td>
+                        <td>{{ holiday.end_date }}</td>
+                        <td>
+                            <button class="delete-btn" onclick="deleteHoliday('{{ holiday.id }}')">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+</div>
+
+<script>
+document.getElementById("holidayForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append("holiday_name", document.getElementById("holiday_name").value);
+    formData.append("holiday_type", document.getElementById("holiday_type").value);
+    formData.append("start_date", document.getElementById("start_date").value);
+    formData.append("end_date", document.getElementById("end_date").value);
+
+    const response = await fetch("/add-holiday", {
+        method: "POST",
+        body: formData
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+        alert(result.message);
+        location.reload();
+    } else {
+        alert(result.detail);
+    }
+});
+
+async function deleteHoliday(holidayId) {
+    if (!confirm("Are you sure you want to delete this holiday?")) {
+        return;
+    }
+
+    const response = await fetch(`/delete-holiday/${holidayId}`, {
+        method: "POST"
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+        alert(result.message);
+        location.reload();
+    } else {
+        alert(result.detail);
+    }
+}
+</script>
+
+</body>
+</html>

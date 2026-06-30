@@ -21,7 +21,29 @@
     <main class="content">
         <h1>{{ person.full_name }}</h1>
         <p class="subtitle">
-            ID: {{ person.person_id }} | Department: {{ person.department }}
+            <strong>Person ID:</strong> {{ person.person_id }}
+            &nbsp; | &nbsp;
+
+            <strong>Department:</strong> {{ person.department }}
+
+            {% if person.contact %}
+            &nbsp; | &nbsp;
+            <strong>Contact:</strong> {{ person.contact }}
+            {% endif %}
+        </p>
+
+        <p class="subtitle" style="margin-top:-18px;">
+            <strong>Email:</strong> {{ person.email }}
+
+            {% if person.college %}
+            &nbsp; | &nbsp;
+            <strong>College:</strong> {{ person.college }}
+            {% endif %}
+
+            {% if person.semester %}
+            &nbsp; | &nbsp;
+            <strong>Semester:</strong> {{ person.semester }}
+            {% endif %}
         </p>
 
         <div class="table-card">
@@ -30,28 +52,71 @@
                     <tr>
                         <th>Date</th>
                         <th>Day</th>
+                        <th>In Time</th>
+                        <th>Out Time</th>
                         <th>Status</th>
                     </tr>
                 </thead>
 
                 <tbody>
+
                     {% for row in report %}
+
                     <tr>
+
                         <td>{{ row.date }}</td>
+
                         <td>{{ row.day }}</td>
 
-                        {% if row.status == "Present" %}
-                        <td><span class="badge present">Present</span></td>
+                        <td>
+                            {% if row.in_time %}
+                                {{ row.in_time.strftime("%I:%M %p") }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
 
-                        {% elif row.status == "Sunday Holiday" %}
-                        <td><span class="badge weekend">Sunday Holiday</span></td>
+                        <td>
+                            {% if row.out_time %}
+                                {{ row.out_time.strftime("%I:%M %p") }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
 
-                        {% else %}
-                        <td><span class="badge absent">Absent</span></td>
-                        {% endif %}
+                        <td>
+
+                            {% if row.status == "Present" %}
+
+                                <span class="badge present">Present</span>
+
+                            {% elif row.status == "Sunday Holiday" %}
+
+                                <span class="badge weekend">
+                                    Sunday Holiday
+                                </span>
+
+                            {% elif row.status == "Absent" %}
+
+                                <span class="badge absent">
+                                    Absent
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge weekend">
+                                    {{ row.status }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
                     </tr>
+
                     {% endfor %}
-                </tbody>
+
+                    </tbody>
             </table>
         </div>
     </main>
