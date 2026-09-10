@@ -5,10 +5,12 @@
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 </head>
+
 <body>
 
 <div class="app-layout">
 
+    <!-- SIDEBAR -->
     <aside class="sidebar">
         <h2>Face Attend</h2>
 
@@ -19,11 +21,20 @@
         <a href="/holidays-page">Holiday Settings</a>
     </aside>
 
+
+    <!-- MAIN CONTENT -->
     <main class="content">
+
         <h1>Dashboard</h1>
         <p class="subtitle">Real-Time Face Attendance System</p>
 
+
+        <!-- ========================= -->
+        <!-- STATISTICS -->
+        <!-- ========================= -->
+
         <div class="stats-grid">
+
             <div class="stat-card">
                 <h3>Total Registered</h3>
                 <h2>{{ total_registered }}</h2>
@@ -38,87 +49,551 @@
                 <h3>Today Absent</h3>
                 <h2>{{ today_absent }}</h2>
             </div>
+
         </div>
-        <div class="dashboard-bottom">
 
-    <div class="chart-card">
-        <h2>Date-wise Attendance</h2>
-        <div id="graphBox"></div>
-    </div>
 
-    <div class="recent-card">
-        <h2>Recent Attendance</h2>
+        <!-- ========================= -->
+        <!-- REPORTS -->
+        <!-- ========================= -->
 
-        {% for item in recent_attendance %}
-        <div class="recent-item">
-            <div>
-                <h4>{{ item.person.full_name }}</h4>
-                <p>{{ item.person.person_id }} | {{ item.person.department }}</p>
+        <div class="reports-section">
+
+            <div class="section-title">
+                <h2>Attendance Reports</h2>
+                <p>Download attendance reports in Excel format.</p>
             </div>
 
-            <span>In:
-                {% if item.in_time %}
-                    {{ item.in_time.strftime("%I:%M %p") }}
-                {% else %}
-                    -
-                {% endif %}
-                <br>
-                Out:
-                {% if item.out_time %}
-                    {{ item.out_time.strftime("%I:%M %p") }}
-                {% else %}
-                    -
-                {% endif %}</span>
-        </div>
-        {% endfor %}
-    </div>
 
-</div>
+            <div class="reports-grid">
+
+                <!-- DAY-WISE REPORT -->
+
+                <div class="report-card">
+
+                    <div class="report-icon">
+                        📅
+                    </div>
+
+                    <div class="report-content">
+
+                        <h3>Day-wise Report</h3>
+
+                        <p>
+                            Download attendance for all registered students
+                            for a selected date.
+                        </p>
+
+                        <label for="dayReportDate">
+                            Select Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="dayReportDate"
+                            class="report-input"
+                        >
+
+                        <button
+                            type="button"
+                            class="download-btn"
+                            onclick="downloadDayReport()"
+                        >
+                            Download Excel
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PERSON-WISE REPORT -->
+
+                <div class="report-card">
+
+                    <div class="report-icon">
+                        👤
+                    </div>
+
+                    <div class="report-content">
+
+                        <h3>Person-wise Report</h3>
+
+                        <p>
+                            Download complete or custom-date attendance
+                            for one student.
+                        </p>
+
+
+                        <label for="personReportSelect">
+                            Select Student
+                        </label>
+
+                        <select
+                            id="personReportSelect"
+                            class="report-input"
+                        >
+
+                            <option value="">
+                                -- Select Student --
+                            </option>
+
+                            {% for person in persons %}
+
+                            <option value="{{ person.person_id }}">
+                                {{ person.person_id }} -
+                                {{ person.full_name }}
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+
+
+                        <div class="report-mode">
+
+                            <label class="radio-option">
+
+                                <input
+                                    type="radio"
+                                    name="personReportMode"
+                                    value="full"
+                                    checked
+                                    onchange="toggleDateRange()"
+                                >
+
+                                Full Report
+
+                            </label>
+
+
+                            <label class="radio-option">
+
+                                <input
+                                    type="radio"
+                                    name="personReportMode"
+                                    value="custom"
+                                    onchange="toggleDateRange()"
+                                >
+
+                                Custom Date Range
+
+                            </label>
+
+                        </div>
+
+
+                        <!-- DATE RANGE -->
+
+                        <div
+                            id="personDateRange"
+                            class="date-range"
+                            style="display:none;"
+                        >
+
+                            <div>
+
+                                <label for="personFromDate">
+                                    From Date
+                                </label>
+
+                                <input
+                                    type="date"
+                                    id="personFromDate"
+                                    class="report-input"
+                                >
+
+                            </div>
+
+
+                            <div>
+
+                                <label for="personToDate">
+                                    To Date
+                                </label>
+
+                                <input
+                                    type="date"
+                                    id="personToDate"
+                                    class="report-input"
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        <button
+                            type="button"
+                            class="download-btn"
+                            onclick="downloadPersonReport()"
+                        >
+                            Download Excel
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================= -->
+        <!-- GRAPH + RECENT ATTENDANCE -->
+        <!-- ========================= -->
+
+        <div class="dashboard-bottom">
+
+
+            <!-- GRAPH -->
+
+            <div class="chart-card">
+
+                <h2>Date-wise Attendance</h2>
+
+                <div id="graphBox"></div>
+
+            </div>
+
+
+            <!-- RECENT ATTENDANCE -->
+
+            <div class="recent-card">
+
+                <h2>Recent Attendance</h2>
+
+
+                {% for item in recent_attendance %}
+
+                <div class="recent-item">
+
+                    <div>
+
+                        <h4>
+                            {{ item.person.full_name }}
+                        </h4>
+
+                        <p>
+                            {{ item.person.person_id }}
+                            |
+                            {{ item.person.department }}
+                        </p>
+
+                    </div>
+
+
+                    <span>
+
+                        In:
+
+                        {% if item.in_time %}
+                            {{ item.in_time.strftime("%I:%M %p") }}
+                        {% else %}
+                            -
+                        {% endif %}
+
+                        <br>
+
+                        Out:
+
+                        {% if item.out_time %}
+                            {{ item.out_time.strftime("%I:%M %p") }}
+                        {% else %}
+                            -
+                        {% endif %}
+
+                    </span>
+
+                </div>
+
+                {% endfor %}
+
+
+                {% if not recent_attendance %}
+
+                <div class="no-data">
+                    No attendance recorded yet.
+                </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
 
     </main>
 
 </div>
+
+
+<!-- ========================= -->
+<!-- JAVASCRIPT -->
+<!-- ========================= -->
+
 <script>
-async function loadGraph() {
-    const response = await fetch("/get-graph-data");
-    const data = await response.json();
 
-    const trace = {
-        x: data.labels,
-        y: data.values,
-        type: "scatter",
-        mode: "lines",
-        fill: "tozeroy",
-        line: {
-            color: "#8b5cf6",
-            width: 3
-        },
-        fillcolor: "rgba(139, 92, 246, 0.18)"
-    };
 
-    const layout = {
-        height: 320,
-        margin: { l: 30, r: 30, t: 20, b: 40 },
-        showlegend: false,
-        paper_bgcolor: "white",
-        plot_bgcolor: "white",
-        xaxis: { showgrid: false },
-        yaxis: {
-            showgrid: true,
-            gridcolor: "#e5e7eb",
-            zeroline: false,
-            showticklabels: false
-        }
-    };
+/* ==========================================
+   DEFAULT DATE
+========================================== */
 
-    Plotly.react("graphBox", [trace], layout, {
-        responsive: true,
-        displayModeBar: false
-    });
+document.addEventListener("DOMContentLoaded", function () {
+
+    const today = new Date();
+
+    const yyyy = today.getFullYear();
+
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+
+    const dd = String(today.getDate()).padStart(2, "0");
+
+    const todayString = `${yyyy}-${mm}-${dd}`;
+
+    document.getElementById("dayReportDate").value = todayString;
+
+});
+
+
+/* ==========================================
+   TOGGLE PERSON DATE RANGE
+========================================== */
+
+function toggleDateRange() {
+
+    const selectedMode =
+        document.querySelector(
+            'input[name="personReportMode"]:checked'
+        ).value;
+
+    const dateRange =
+        document.getElementById("personDateRange");
+
+
+    if (selectedMode === "custom") {
+
+        dateRange.style.display = "grid";
+
+    } else {
+
+        dateRange.style.display = "none";
+
+    }
+
 }
 
+
+/* ==========================================
+   DAY-WISE REPORT
+========================================== */
+
+function downloadDayReport() {
+
+    const reportDate =
+        document.getElementById("dayReportDate").value;
+
+
+    if (!reportDate) {
+
+        alert("Please select a date.");
+
+        return;
+    }
+
+
+    const url =
+        `/reports/day-wise?report_date=${encodeURIComponent(reportDate)}`;
+
+
+    window.location.href = url;
+
+}
+
+
+/* ==========================================
+   PERSON-WISE REPORT
+========================================== */
+
+function downloadPersonReport() {
+
+    const personId =
+        document.getElementById("personReportSelect").value;
+
+
+    if (!personId) {
+
+        alert("Please select a student.");
+
+        return;
+    }
+
+
+    const mode =
+        document.querySelector(
+            'input[name="personReportMode"]:checked'
+        ).value;
+
+
+    /* FULL REPORT */
+
+    if (mode === "full") {
+
+        window.location.href =
+            `/reports/person-wise/${encodeURIComponent(personId)}`;
+
+        return;
+    }
+
+
+    /* CUSTOM DATE REPORT */
+
+    const fromDate =
+        document.getElementById("personFromDate").value;
+
+    const toDate =
+        document.getElementById("personToDate").value;
+
+
+    if (!fromDate || !toDate) {
+
+        alert("Please select both From Date and To Date.");
+
+        return;
+    }
+
+
+    if (fromDate > toDate) {
+
+        alert("From Date cannot be greater than To Date.");
+
+        return;
+    }
+
+
+    const url =
+        `/reports/person-wise/${encodeURIComponent(personId)}` +
+        `?from_date=${encodeURIComponent(fromDate)}` +
+        `&to_date=${encodeURIComponent(toDate)}`;
+
+
+    window.location.href = url;
+
+}
+
+
+/* ==========================================
+   DASHBOARD GRAPH
+========================================== */
+
+async function loadGraph() {
+
+    try {
+
+        const response =
+            await fetch("/get-graph-data");
+
+
+        if (!response.ok) {
+
+            throw new Error("Unable to load graph data.");
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const trace = {
+
+            x: data.labels,
+
+            y: data.values,
+
+            type: "scatter",
+
+            mode: "lines",
+
+            fill: "tozeroy",
+
+            line: {
+
+                color: "#8b5cf6",
+
+                width: 3
+
+            },
+
+            fillcolor: "rgba(139, 92, 246, 0.18)"
+
+        };
+
+
+        const layout = {
+
+            height: 320,
+
+            margin: {
+                l: 30,
+                r: 30,
+                t: 20,
+                b: 40
+            },
+
+            showlegend: false,
+
+            paper_bgcolor: "white",
+
+            plot_bgcolor: "white",
+
+            xaxis: {
+                showgrid: false
+            },
+
+            yaxis: {
+
+                showgrid: true,
+
+                gridcolor: "#e5e7eb",
+
+                zeroline: false,
+
+                showticklabels: false
+
+            }
+
+        };
+
+
+        Plotly.react(
+            "graphBox",
+            [trace],
+            layout,
+            {
+                responsive: true,
+                displayModeBar: false
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+    }
+
+}
+
+
 loadGraph();
+
+
 setInterval(loadGraph, 10000);
+
+
 </script>
+
 </body>
 </html>

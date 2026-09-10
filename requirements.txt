@@ -11,3 +11,4 @@ pillow
 tzdata 
 plotly 
 pandas 
+openpyxl

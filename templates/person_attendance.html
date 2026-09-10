@@ -1,127 +1,537 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
     <title>Person Attendance</title>
-    <link rel="stylesheet" href="/static/style.css">
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
 </head>
+
+
 <body>
+
 
 <div class="app-layout">
 
-     
+
+    <!-- SIDEBAR -->
+
     <aside class="sidebar">
+
         <h2>Face Attend</h2>
 
-        <a href="/">Dashboard</a>
-        <!-- <a href="/register-page">Register Person</a>
-        <a href="/attendance-page">Attendance</a> -->
-        <a href="/persons-page" class="active">Registered Persons</a>
+
+        <a href="/">
+            Dashboard
+        </a>
+
+
+        <a href="/register-page">
+            Register Person
+        </a>
+
+
+        <a href="/attendance-page">
+            Attendance
+        </a>
+
+
+        <a
+            href="/persons-page"
+            class="active"
+        >
+            Registered Persons
+        </a>
+
+
+        <a href="/holidays-page">
+            Holiday Settings
+        </a>
+
     </aside>
 
+
+    <!-- MAIN CONTENT -->
+
     <main class="content">
-        <h1>{{ person.full_name }}</h1>
+
+
+        <!-- ========================= -->
+        <!-- PERSON INFORMATION -->
+        <!-- ========================= -->
+
+        <h1>
+            {{ person.full_name }}
+        </h1>
+
+
         <p class="subtitle">
-            <strong>Person ID:</strong> {{ person.person_id }}
+
+            <strong>
+                Person ID:
+            </strong>
+
+            {{ person.person_id }}
+
             &nbsp; | &nbsp;
 
-            <strong>Department:</strong> {{ person.department }}
+
+            <strong>
+                Department:
+            </strong>
+
+            {{ person.department }}
+
 
             {% if person.contact %}
+
             &nbsp; | &nbsp;
-            <strong>Contact:</strong> {{ person.contact }}
+
+            <strong>
+                Contact:
+            </strong>
+
+            {{ person.contact }}
+
             {% endif %}
+
         </p>
 
-        <p class="subtitle" style="margin-top:-18px;">
-            <strong>Email:</strong> {{ person.email }}
+
+        <p
+            class="subtitle"
+            style="margin-top:-18px;"
+        >
+
+            <strong>
+                Email:
+            </strong>
+
+            {{ person.email }}
+
 
             {% if person.college %}
+
             &nbsp; | &nbsp;
-            <strong>College:</strong> {{ person.college }}
+
+            <strong>
+                College:
+            </strong>
+
+            {{ person.college }}
+
             {% endif %}
+
 
             {% if person.semester %}
+
             &nbsp; | &nbsp;
-            <strong>Semester:</strong> {{ person.semester }}
+
+            <strong>
+                Semester:
+            </strong>
+
+            {{ person.semester }}
+
             {% endif %}
+
         </p>
 
+
+        <!-- ========================= -->
+        <!-- EXCEL REPORT SECTION -->
+        <!-- ========================= -->
+
+        <div class="person-report-panel">
+
+
+            <div class="person-report-header">
+
+                <div>
+
+                    <h2>
+                        Attendance Report
+                    </h2>
+
+                    <p>
+                        Download this student's attendance
+                        as an Excel file.
+                    </p>
+
+                </div>
+
+
+                <a
+                    href="/reports/person-wise/{{ person.person_id }}"
+                    class="download-btn report-download-main"
+                >
+                    Download Full Report
+                </a>
+
+            </div>
+
+
+            <!-- REPORT MODE -->
+
+            <div class="person-report-options">
+
+
+                <label class="radio-option">
+
+                    <input
+                        type="radio"
+                        name="attendanceReportMode"
+                        value="full"
+                        checked
+                        onchange="togglePersonDateRange()"
+                    >
+
+                    Full Report
+
+                </label>
+
+
+                <label class="radio-option">
+
+                    <input
+                        type="radio"
+                        name="attendanceReportMode"
+                        value="custom"
+                        onchange="togglePersonDateRange()"
+                    >
+
+                    Custom Date Range
+
+                </label>
+
+
+            </div>
+
+
+            <!-- CUSTOM DATE RANGE -->
+
+            <div
+                id="customPersonDateRange"
+                class="person-date-range"
+                style="display:none;"
+            >
+
+
+                <div>
+
+                    <label for="fromDate">
+                        From Date
+                    </label>
+
+                    <input
+                        type="date"
+                        id="fromDate"
+                        class="report-input"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <label for="toDate">
+                        To Date
+                    </label>
+
+                    <input
+                        type="date"
+                        id="toDate"
+                        class="report-input"
+                    >
+
+                </div>
+
+
+                <div class="date-download-wrapper">
+
+                    <button
+                        type="button"
+                        class="download-btn"
+                        onclick="downloadCustomReport()"
+                    >
+                        Download Excel
+                    </button>
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+        <!-- ========================= -->
+        <!-- ATTENDANCE TABLE -->
+        <!-- ========================= -->
+
         <div class="table-card">
+
+
             <table>
+
                 <thead>
+
                     <tr>
-                        <th>Date</th>
-                        <th>Day</th>
-                        <th>In Time</th>
-                        <th>Out Time</th>
-                        <th>Status</th>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Day
+                        </th>
+
+                        <th>
+                            In Time
+                        </th>
+
+                        <th>
+                            Out Time
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
                     </tr>
+
                 </thead>
+
 
                 <tbody>
 
+
                     {% for row in report %}
+
 
                     <tr>
 
-                        <td>{{ row.date }}</td>
-
-                        <td>{{ row.day }}</td>
 
                         <td>
+                            {{ row.date }}
+                        </td>
+
+
+                        <td>
+                            {{ row.day }}
+                        </td>
+
+
+                        <td>
+
                             {% if row.in_time %}
+
                                 {{ row.in_time.strftime("%I:%M %p") }}
+
                             {% else %}
+
                                 -
+
                             {% endif %}
+
                         </td>
 
+
                         <td>
+
                             {% if row.out_time %}
+
                                 {{ row.out_time.strftime("%I:%M %p") }}
+
                             {% else %}
+
                                 -
+
                             {% endif %}
+
                         </td>
 
+
                         <td>
+
 
                             {% if row.status == "Present" %}
 
-                                <span class="badge present">Present</span>
+
+                                <span class="badge present">
+                                    Present
+                                </span>
+
 
                             {% elif row.status == "Sunday Holiday" %}
+
 
                                 <span class="badge weekend">
                                     Sunday Holiday
                                 </span>
 
+
                             {% elif row.status == "Absent" %}
+
 
                                 <span class="badge absent">
                                     Absent
                                 </span>
 
+
                             {% else %}
+
 
                                 <span class="badge weekend">
                                     {{ row.status }}
                                 </span>
 
+
                             {% endif %}
 
+
+                        </td>
+
+
+                    </tr>
+
+
+                    {% endfor %}
+
+
+                    {% if not report %}
+
+                    <tr>
+
+                        <td
+                            colspan="5"
+                            class="empty-table"
+                        >
+                            No attendance data available.
                         </td>
 
                     </tr>
 
-                    {% endfor %}
+                    {% endif %}
 
-                    </tbody>
+
+                </tbody>
+
+
             </table>
+
+
         </div>
+
+
     </main>
+
 
 </div>
 
+
+<script>
+
+
+/* ==========================================
+   TOGGLE DATE RANGE
+========================================== */
+
+function togglePersonDateRange() {
+
+
+    const mode =
+        document.querySelector(
+            'input[name="attendanceReportMode"]:checked'
+        ).value;
+
+
+    const dateRange =
+        document.getElementById(
+            "customPersonDateRange"
+        );
+
+
+    if (mode === "custom") {
+
+        dateRange.style.display = "grid";
+
+    }
+
+    else {
+
+        dateRange.style.display = "none";
+
+    }
+
+}
+
+
+/* ==========================================
+   CUSTOM PERSON REPORT
+========================================== */
+
+function downloadCustomReport() {
+
+
+    const fromDate =
+        document.getElementById(
+            "fromDate"
+        ).value;
+
+
+    const toDate =
+        document.getElementById(
+            "toDate"
+        ).value;
+
+
+    if (!fromDate || !toDate) {
+
+        alert(
+            "Please select both From Date and To Date."
+        );
+
+        return;
+
+    }
+
+
+    if (fromDate > toDate) {
+
+        alert(
+            "From Date cannot be greater than To Date."
+        );
+
+        return;
+
+    }
+
+
+    const personId =
+        "{{ person.person_id }}";
+
+
+    const url =
+        `/reports/person-wise/${encodeURIComponent(personId)}` +
+        `?from_date=${encodeURIComponent(fromDate)}` +
+        `&to_date=${encodeURIComponent(toDate)}`;
+
+
+    window.location.href = url;
+
+}
+
+
+</script>
+
+
 </body>
+
 </html>
